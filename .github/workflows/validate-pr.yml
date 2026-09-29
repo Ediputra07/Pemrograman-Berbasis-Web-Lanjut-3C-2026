@@ -1,0 +1,121 @@
+name: Validasi PR Praktikum PBWL
+
+on:
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate-pr-rules:
+    name: Validasi Scope Folder & Format Commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validasi Scope Folder (Hanya 1 Folder Mahasiswa)
+        run: |
+          echo "🔍 Memeriksa file yang diubah dalam PR..."
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          
+          echo "File yang diubah:"
+          echo "$CHANGED_FILES"
+          
+          # Ambil nama folder tingkat pertama dari setiap file yang diubah
+          STUDENT_FOLDERS=$(echo "$CHANGED_FILES" | cut -d'/' -f1 | grep -E '^[0-9]{12}-' | sort -u || true)
+          NON_STUDENT_FILES=$(echo "$CHANGED_FILES" | grep -v -E '^[0-9]{12}-' || true)
+
+          # Cek jika ada file di luar folder mahasiswa (misal mengedit README root)
+          if [ -n "$NON_STUDENT_FILES" ]; then
+            echo "❌ ERROR: PR Anda mengubah file di luar folder mahasiswa Anda:"
+            echo "$NON_STUDENT_FILES"
+            echo "Dilarang mengubah file root (seperti README.md, .gitignore, workflow CI)!"
+            exit 1
+          fi
+
+          # Cek jumlah folder mahasiswa yang disentuh
+          FOLDER_COUNT=$(echo "$STUDENT_FOLDERS" | wc -l)
+          if [ "$FOLDER_COUNT" -gt 1 ]; then
+            echo "❌ ERROR: PR Anda mengubah lebih dari 1 folder mahasiswa:"
+            echo "$STUDENT_FOLDERS"
+            echo "Anda hanya diperbolehkan mengubah folder milik Anda sendiri!"
+            exit 1
+          fi
+
+          echo "✅ Validasi Scope Folder Lolos! Folder yang diubah: $STUDENT_FOLDERS"
+
+      - name: Validasi Format Commit Message
+        run: |
+          echo "🔍 Memeriksa format commit message..."
+          # Format yang diharapkan: NIM_NamaLengkap_MODUL<X>_NamaAsprak
+          # Contoh: 240441100057_OktaviaPutriRoichatulJannah_MODUL1_KakSalman
+          PATTERN="^[0-9]{12}_[A-Za-z0-9]+_MODUL[0-9]+_[A-Za-z0-9]+$"
+          
+          COMMITS=$(git log origin/${{ github.base_ref }}..HEAD --oneline --format="%s")
+          INVALID_COMMITS=0
+
+          while IFS= read -r commit_msg; do
+            if [[ ! "$commit_msg" =~ $PATTERN ]]; then
+              echo "❌ Format Commit Salah: \"$commit_msg\""
+              INVALID_COMMITS=$((INVALID_COMMITS + 1))
+            else
+              echo "✅ Format Commit Benar: \"$commit_msg\""
+            fi
+          done <<< "$COMMITS"
+
+          if [ "$INVALID_COMMITS" -gt 0 ]; then
+            echo ""
+            echo "=========================================================="
+            echo "❌ GAGAL: Terdapat $INVALID_COMMITS commit dengan format salah!"
+            echo "Format wajib: NIM_NamaLengkap_MODUL<X>_NamaAsprak"
+            echo "Contoh: 240441100057_OktaviaPutriRoichatulJannah_MODUL1_KakSalman"
+            echo "=========================================================="
+            exit 1
+          fi
+
+          echo "🎉 Semua commit message sesuai dengan standar!"
+
+  php-syntax-check:
+    name: Syntax Check PHP (Laravel 13)
+    needs: validate-pr-rules
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - name: Cek Syntax File PHP yang Diubah
+        run: |
+          CHANGED_PHP_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '\.php$' || true)
+
+          if [ -z "$CHANGED_PHP_FILES" ]; then
+            echo "Tidak ada file PHP yang diubah."
+            exit 0
+          fi
+
+          echo "🔍 Memeriksa sintaks PHP pada file berikut:"
+          echo "$CHANGED_PHP_FILES"
+
+          SYNTAX_ERRORS=0
+          for file in $CHANGED_PHP_FILES; do
+            if [ -f "$file" ]; then
+              php -l "$file" || SYNTAX_ERRORS=$((SYNTAX_ERRORS + 1))
+            fi
+          done
+
+          if [ "$SYNTAX_ERRORS" -gt 0 ]; then
+            echo "❌ GAGAL: Ditemukan $SYNTAX_ERRORS file PHP dengan error sintaks!"
+            exit 1
+          fi
+
+          echo "✅ Semua file PHP bebas dari sintaks error!"
