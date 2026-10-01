@@ -50,33 +50,49 @@ jobs:
       - name: Validasi Format Commit Message
         run: |
           echo "🔍 Memeriksa format commit message..."
-          # Format yang diharapkan: NIM_NamaLengkap_MODUL<X>_NamaAsprak
-          # Contoh: 240441100057_OktaviaPutriRoichatulJannah_MODUL1_KakSalman
-          PATTERN="^[0-9]{12}_[A-Za-z0-9]+_MODUL[0-9]+_[A-Za-z0-9]+$"
           
+          # Ambil daftar commit message dalam PR
           COMMITS=$(git log origin/${{ github.base_ref }}..HEAD --oneline --format="%s")
-          INVALID_COMMITS=0
+          
+          VALID_COMMITS=0
+          TOTAL_NON_MERGE_COMMITS=0
+
+          # Enable case-insensitive matching di bash
+          shopt -s nocasematch
+          
+          # Pattern fleksibel: NIM (12 angka) + Nama + MODUL <Nomor> + Nama Asprak
+          # Mendukung pemisah berupa (_), (-), atau spasi ( )
+          PATTERN="^[0-9]{12}[_ -]+.+[_ -]+MODUL[ _-]*[0-9]+[_ -]+.+"
 
           while IFS= read -r commit_msg; do
-            if [[ ! "$commit_msg" =~ $PATTERN ]]; then
-              echo "❌ Format Commit Salah: \"$commit_msg\""
-              INVALID_COMMITS=$((INVALID_COMMITS + 1))
-            else
+            # Abaikan commit otomatis buatan Git (seperti Merge branch...)
+            if [[ "$commit_msg" =~ ^Merge[[:space:]] ]]; then
+              echo "ℹ️ Mengabaikan commit merge otomatis: \"$commit_msg\""
+              continue
+            fi
+
+            TOTAL_NON_MERGE_COMMITS=$((TOTAL_NON_MERGE_COMMITS + 1))
+
+            if [[ "$commit_msg" =~ $PATTERN ]]; then
               echo "✅ Format Commit Benar: \"$commit_msg\""
+              VALID_COMMITS=$((VALID_COMMITS + 1))
+            else
+              echo "⚠️ Format Commit Tidak Sesuai: \"$commit_msg\""
             fi
           done <<< "$COMMITS"
 
-          if [ "$INVALID_COMMITS" -gt 0 ]; then
+          if [ "$VALID_COMMITS" -lt 1 ]; then
             echo ""
             echo "=========================================================="
-            echo "❌ GAGAL: Terdapat $INVALID_COMMITS commit dengan format salah!"
-            echo "Format wajib: NIM_NamaLengkap_MODUL<X>_NamaAsprak"
-            echo "Contoh: 240441100057_OktaviaPutriRoichatulJannah_MODUL1_KakSalman"
+            echo "❌ GAGAL: Tidak ditemukan commit yang sesuai format!"
+            echo "Format yang diterima: NIM_NamaLengkap_MODUL<X>_NamaAsprak"
+            echo "(Boleh menggunakan huruf besar/kecil, pemisah spasi/strip/underscore)"
+            echo "Contoh: 250441100011_MithaAuliaNisrina_MODUL1_KakOkta"
             echo "=========================================================="
             exit 1
           fi
 
-          echo "🎉 Semua commit message sesuai dengan standar!"
+          echo "🎉 Lolos! Ditemukan $VALID_COMMITS commit yang sesuai dengan standar."
 
   php-syntax-check:
     name: Syntax Check PHP (Laravel 13)
