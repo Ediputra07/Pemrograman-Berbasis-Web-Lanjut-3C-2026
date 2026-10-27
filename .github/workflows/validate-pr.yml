@@ -1,4 +1,4 @@
-﻿name: Validasi PR Praktikum PBWL
+name: Validasi PR Praktikum PBWL
 
 on:
   pull_request_target:
@@ -6,8 +6,14 @@ on:
       - main
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   validate-pr-rules:
@@ -21,51 +27,64 @@ jobs:
           fetch-depth: 0
           allow-unsafe-pr-checkout: true
 
-      - name: Fetch Target Branch
+      - name: Sinkronisasi dengan Main WargaLab
         run: |
-          git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
+          git fetch origin main:refs/remotes/origin/main
+          MERGE_BASE=$(git merge-base origin/main HEAD)
+          echo "MERGE_BASE=$MERGE_BASE" >> $GITHUB_ENV
+          echo "Titik temu commit (merge-base) terhadap main WargaLab: $MERGE_BASE"
+
+      - name: Validasi File Terlarang
+        run: |
+          echo "Memeriksa keberadaan file terlarang terhadap main WargaLab..."
+          CHANGED_FILES=$(git diff --name-only $MERGE_BASE...HEAD)
+          FORBIDDEN_FILES=$(echo "$CHANGED_FILES" | grep -iE '\.(sqlite|sqlite3|db|zip|rar|tar\.gz|7z)$|\.env(\..+)?$' || true)
+
+          if [ -n "$FORBIDDEN_FILES" ]; then
+            echo "ERROR: Ditemukan file yang dilarang dalam repositori:"
+            echo "$FORBIDDEN_FILES"
+            echo "Dilarang menyertakan file database lokal (sqlite/db), arsip kompresi (zip/rar/7z), atau konfigurasi .env."
+            exit 1
+          fi
+          echo "Lolos: Tidak ada file terlarang yang ditemukan."
 
       - name: Validasi Scope Folder (Hanya 1 Folder Mahasiswa)
         run: |
-          echo "🔍 Memeriksa file yang diubah dalam PR..."
-          CHANGED_FILES=$(git diff --name-only ${{ github.base_ref }}...HEAD)
+          echo "Memeriksa file yang diubah dalam PR terhadap main WargaLab..."
+          CHANGED_FILES=$(git diff --name-only $MERGE_BASE...HEAD)
           
           echo "File yang diubah:"
           echo "$CHANGED_FILES"
           
-          # Ambil nama folder tingkat pertama dari setiap file yang diubah
           STUDENT_FOLDERS=$(echo "$CHANGED_FILES" | cut -d'/' -f1 | grep -E '^[0-9]{12}-' | sort -u || true)
           NON_STUDENT_FILES=$(echo "$CHANGED_FILES" | grep -v -E '^[0-9]{12}-' || true)
 
-          # Cek jika ada file di luar folder mahasiswa
           if [ -n "$NON_STUDENT_FILES" ]; then
-            echo "❌ ERROR: PR Anda mengubah file di luar folder mahasiswa Anda:"
+            echo "ERROR: PR Anda mengubah file di luar folder mahasiswa Anda:"
             echo "$NON_STUDENT_FILES"
             echo "Dilarang mengubah file root (seperti README.md, .gitignore, workflow CI)!"
             exit 1
           fi
 
           if [ -z "$STUDENT_FOLDERS" ]; then
-            echo "❌ ERROR: Tidak ditemukan perubahan pada folder mahasiswa (format: 12digitNIM-NAMA)!"
+            echo "ERROR: Tidak ditemukan perubahan pada folder mahasiswa (format: 12digitNIM-NAMA)!"
             exit 1
           fi
 
-          # Cek jumlah folder mahasiswa yang disentuh
           FOLDER_COUNT=$(echo "$STUDENT_FOLDERS" | grep -c -E '^[0-9]{12}-' || true)
           if [ "$FOLDER_COUNT" -gt 1 ]; then
-            echo "❌ ERROR: PR Anda mengubah lebih dari 1 folder mahasiswa:"
+            echo "ERROR: PR Anda mengubah lebih dari 1 folder mahasiswa:"
             echo "$STUDENT_FOLDERS"
             echo "Anda hanya diperbolehkan mengubah folder milik Anda sendiri!"
             exit 1
           fi
 
-          echo "✅ Validasi Scope Folder Lolos! Folder yang diubah: $STUDENT_FOLDERS"
+          echo "Lolos: Validasi Scope Folder Berhasil. Folder yang diubah: $STUDENT_FOLDERS"
 
       - name: Validasi Format Commit Message
         run: |
-          echo "🔍 Memeriksa format commit message..."
-          
-          COMMITS=$(git log ${{ github.base_ref }}..HEAD --oneline --format="%s")
+          echo "Memeriksa format commit message terhadap main WargaLab..."
+          COMMITS=$(git log $MERGE_BASE..HEAD --oneline --format="%s")
           
           VALID_COMMITS=0
           TOTAL_COMMITS=0
@@ -75,26 +94,25 @@ jobs:
           while IFS= read -r commit_msg; do
             [ -z "$commit_msg" ] && continue
 
-            # Abaikan commit merge otomatis
             if [[ "$commit_msg" =~ ^Merge[[:space:]] ]]; then
-              echo "ℹ️ Mengabaikan commit merge otomatis: \"$commit_msg\""
+              echo "Mengabaikan commit merge otomatis: \"$commit_msg\""
               continue
             fi
 
             TOTAL_COMMITS=$((TOTAL_COMMITS + 1))
 
             if [[ "$commit_msg" =~ $REGEX ]]; then
-              echo "✅ Format Commit Benar: \"$commit_msg\""
+              echo "Format Commit Benar: \"$commit_msg\""
               VALID_COMMITS=$((VALID_COMMITS + 1))
             else
-              echo "⚠️ Format Commit Tidak Sesuai: \"$commit_msg\""
+              echo "Format Commit Tidak Sesuai: \"$commit_msg\""
             fi
           done <<< "$COMMITS"
 
           if [ "$VALID_COMMITS" -lt 1 ]; then
             echo ""
             echo "=========================================================="
-            echo "❌ GAGAL: Tidak ditemukan commit yang sesuai format!"
+            echo "GAGAL: Tidak ditemukan commit yang sesuai format!"
             echo "Format yang diterima: NIM_NamaLengkap_MODUL<X>_NamaAsprak"
             echo "(Boleh menggunakan huruf besar/kecil, pemisah spasi/strip/underscore)"
             echo "Contoh: 250441100096_FahiraAnnisa_Modul3_KakEdi"
@@ -102,7 +120,41 @@ jobs:
             exit 1
           fi
 
-          echo "🎉 Lolos! Ditemukan $VALID_COMMITS commit yang sesuai dengan standar."
+          echo "Lolos: Ditemukan $VALID_COMMITS commit yang sesuai dengan standar."
+
+      - name: Kelola Komentar Validasi Aturan PR (Anti Numpuk)
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const botTag = '<!-- pbwl-validation-rules-bot -->';
+
+            const comments = await github.rest.issues.listComments({
+              owner, repo, issue_number: pr.number
+            });
+            const existingComment = comments.data.find(c => c.body && c.body.includes(botTag));
+
+            if ('${{ job.status }}' === 'failure') {
+              const message = `${botTag}\n**Status Validasi Aturan: Gagal**\n\nHalo @${pr.user.login},\n\nValidasi otomatis mendeteksi bahwa Pull Request Anda belum memenuhi aturan praktikum PBWL. Kemungkinan penyebab:\n1. Terdapat modifikasi file di luar folder direktori mahasiswa Anda (\`NIM-NAMA\`).\n2. Format commit belum sesuai standar: \`NIM_NamaLengkap_MODUL<X>_NamaAsprak\`.\n3. Terdapat file terlarang yang terunggah (seperti database SQLite, arsip zip/rar, atau file .env).\n\nSilakan periksa detail tab "Checks", lakukan perbaikan pada repositori fork lokal Anda, lalu push kembali ke branch Anda (PR akan otomatis diperbarui).`;
+
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner, repo, comment_id: existingComment.id, body: message
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: pr.number, body: message
+                });
+              }
+            } else if ('${{ job.status }}' === 'success' && existingComment) {
+              await github.rest.issues.deleteComment({
+                owner, repo, comment_id: existingComment.id
+              });
+            }
 
   php-syntax-check:
     name: Syntax Check PHP (Laravel 13)
@@ -116,9 +168,11 @@ jobs:
           fetch-depth: 0
           allow-unsafe-pr-checkout: true
 
-      - name: Fetch Target Branch
+      - name: Sinkronisasi dengan Main WargaLab
         run: |
-          git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
+          git fetch origin main:refs/remotes/origin/main
+          MERGE_BASE=$(git merge-base origin/main HEAD)
+          echo "MERGE_BASE=$MERGE_BASE" >> $GITHUB_ENV
 
       - name: Setup PHP 8.3
         uses: shivammathur/setup-php@v2
@@ -128,14 +182,14 @@ jobs:
 
       - name: Cek Syntax File PHP yang Diubah
         run: |
-          CHANGED_PHP_FILES=$(git diff --name-only ${{ github.base_ref }}...HEAD | grep '\.php$' || true)
+          CHANGED_PHP_FILES=$(git diff --name-only $MERGE_BASE...HEAD | grep '\.php$' || true)
 
           if [ -z "$CHANGED_PHP_FILES" ]; then
             echo "Tidak ada file PHP yang diubah."
             exit 0
           fi
 
-          echo "🔍 Memeriksa sintaks PHP pada file berikut:"
+          echo "Memeriksa sintaks PHP pada file berikut:"
           echo "$CHANGED_PHP_FILES"
 
           SYNTAX_ERRORS=0
@@ -146,8 +200,42 @@ jobs:
           done
 
           if [ "$SYNTAX_ERRORS" -gt 0 ]; then
-            echo "❌ GAGAL: Ditemukan $SYNTAX_ERRORS file PHP dengan error sintaks!"
+            echo "GAGAL: Ditemukan $SYNTAX_ERRORS file PHP dengan error sintaks!"
             exit 1
           fi
 
-          echo "✅ Semua file PHP bebas dari sintaks error!"
+          echo "Lolos: Semua file PHP bebas dari sintaks error."
+
+      - name: Kelola Komentar Sintaks PHP (Anti Numpuk)
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const botTag = '<!-- pbwl-validation-syntax-bot -->';
+
+            const comments = await github.rest.issues.listComments({
+              owner, repo, issue_number: pr.number
+            });
+            const existingComment = comments.data.find(c => c.body && c.body.includes(botTag));
+
+            if ('${{ job.status }}' === 'failure') {
+              const message = `${botTag}\n**Status Validasi Sintaks: Gagal**\n\nHalo @${pr.user.login},\n\nPengujian sintaks PHP gagal pada Pull Request Anda. Ditemukan file PHP yang mengandung kesalahan sintaks (syntax error).\n\nSilakan periksa detail tab "Checks" untuk melihat nama file dan baris yang bermasalah, perbaiki di lingkungan lokal Anda, lalu push kembali pembaruannya.`;
+
+              if (existingComment) {
+                await github.rest.issues.updateComment({
+                  owner, repo, comment_id: existingComment.id, body: message
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner, repo, issue_number: pr.number, body: message
+                });
+              }
+            } else if ('${{ job.status }}' === 'success' && existingComment) {
+              await github.rest.issues.deleteComment({
+                owner, repo, comment_id: existingComment.id
+              });
+            }
