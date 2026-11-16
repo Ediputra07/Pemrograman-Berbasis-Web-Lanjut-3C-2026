@@ -1,0 +1,92 @@
+
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch master
+# Changes to be committed:
+#	modified:   CLAUDE.md
+#	new file:   app/Http/Controllers/Admin/UserController.php
+#	modified:   app/Http/Controllers/Api/BukuController.php
+#	new file:   app/Http/Controllers/Auth/AuthenticatedSessionController.php
+#	new file:   app/Http/Controllers/Auth/ConfirmablePasswordController.php
+#	new file:   app/Http/Controllers/Auth/EmailVerificationNotificationController.php
+#	new file:   app/Http/Controllers/Auth/EmailVerificationPromptController.php
+#	new file:   app/Http/Controllers/Auth/NewPasswordController.php
+#	new file:   app/Http/Controllers/Auth/PasswordController.php
+#	new file:   app/Http/Controllers/Auth/PasswordResetLinkController.php
+#	new file:   app/Http/Controllers/Auth/RegisteredUserController.php
+#	new file:   app/Http/Controllers/Auth/VerifyEmailController.php
+#	modified:   app/Http/Controllers/BukuController.php
+#	new file:   app/Http/Controllers/LaporanController.php
+#	new file:   app/Http/Controllers/PeminjamanController.php
+#	new file:   app/Http/Controllers/ProfileController.php
+#	new file:   app/Http/Controllers/UserController.php
+#	new file:   app/Http/Requests/Auth/LoginRequest.php
+#	new file:   app/Http/Requests/ProfileUpdateRequest.php
+#	modified:   app/Models/Peminjaman.php
+#	modified:   app/Models/User.php
+#	new file:   app/Policies/PeminjamanPolicy.php
+#	new file:   app/View/Components/AppLayout.php
+#	new file:   app/View/Components/GuestLayout.php
+#	new file:   app/View/Components/application-logo.blade.php
+#	modified:   bootstrap/app.php
+#	modified:   composer.json
+#	modified:   composer.lock
+#	new file:   config/permission.php
+#	new file:   database/migrations/2026_11_01_144728_create_permission_tables.php
+#	modified:   database/seeders/DatabaseSeeder.php
+#	new file:   database/seeders/RolePermissionSeeder.php
+#	modified:   package-lock.json
+#	modified:   package.json
+#	new file:   postcss.config.js
+#	modified:   resources/css/app.css
+#	modified:   resources/js/app.js
+#	new file:   resources/views/admin/laporan/index.blade.php
+#	new file:   resources/views/admin/peminjaman/index.blade.php
+#	new file:   resources/views/admin/users/edit.blade.php
+#	new file:   resources/views/admin/users/index.blade.php
+#	new file:   resources/views/auth/confirm-password.blade.php
+#	new file:   resources/views/auth/forgot-password.blade.php
+#	new file:   resources/views/auth/login.blade.php
+#	new file:   resources/views/auth/register.blade.php
+#	new file:   resources/views/auth/reset-password.blade.php
+#	new file:   resources/views/auth/verify-email.blade.php
+#	modified:   resources/views/buku/index.blade.php
+#	new file:   resources/views/components/application-logo.blade.php
+#	new file:   resources/views/components/auth-session-status.blade.php
+#	new file:   resources/views/components/danger-button.blade.php
+#	new file:   resources/views/components/dropdown-link.blade.php
+#	new file:   resources/views/components/dropdown.blade.php
+#	new file:   resources/views/components/input-error.blade.php
+#	new file:   resources/views/components/input-label.blade.php
+#	new file:   resources/views/components/modal.blade.php
+#	new file:   resources/views/components/nav-link.blade.php
+#	new file:   resources/views/components/primary-button.blade.php
+#	new file:   resources/views/components/responsive-nav-link.blade.php
+#	new file:   resources/views/components/secondary-button.blade.php
+#	new file:   resources/views/components/text-input.blade.php
+#	new file:   resources/views/dashboard.blade.php
+#	new file:   resources/views/laporan/index.blade.php
+#	modified:   resources/views/layouts/app.blade.php
+#	new file:   resources/views/layouts/guest.blade.php
+#	new file:   resources/views/layouts/navigation.blade.php
+#	new file:   resources/views/peminjaman/index.blade.php
+#	new file:   resources/views/profile/edit.blade.php
+#	new file:   resources/views/profile/partials/delete-user-form.blade.php
+#	new file:   resources/views/profile/partials/update-password-form.blade.php
+#	new file:   resources/views/profile/partials/update-profile-information-form.blade.php
+#	new file:   resources/views/siswa/peminjaman/riwayat.blade.php
+#	modified:   resources/views/welcome.blade.php
+#	modified:   routes/api.php
+#	new file:   routes/auth.php
+#	modified:   routes/web.php
+#	new file:   tailwind.config.js
+#	new file:   tests/Feature/Auth/AuthenticationTest.php
+#	new file:   tests/Feature/Auth/EmailVerificationTest.php
+#	new file:   tests/Feature/Auth/PasswordConfirmationTest.php
+#	new file:   tests/Feature/Auth/PasswordResetTest.php
+#	new file:   tests/Feature/Auth/PasswordUpdateTest.php
+#	new file:   tests/Feature/Auth/RegistrationTest.php
+#	new file:   tests/Feature/ProfileTest.php
+#	modified:   vite.config.js
+#

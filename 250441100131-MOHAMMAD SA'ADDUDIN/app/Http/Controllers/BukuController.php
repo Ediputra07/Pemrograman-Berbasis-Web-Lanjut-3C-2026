@@ -2,62 +2,37 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Buku;
+use App\Models\Kategori;
+
 class BukuController extends Controller
 {
-    private array $daftarBuku = [
-        [
-            'id' => 1,
-            'judul' => 'Automate the Boring Stuff with Python',
-            'penulis' => 'Al Sweigart',
-            'tahun_terbit' => 2015,
-            'kategori' => 'Pemrograman',
-            'tautan_baca' => 'https://automatetheboringstuff.com/',
-        ],
-        [
-            'id' => 2,
-            'judul' => 'Clean Architecture',
-            'penulis' => 'Robert C. Martin',
-            'tahun_terbit' => 2017,
-            'kategori' => 'Rekayasa Perangkat Lunak',
-            'tautan_baca' => 'https://www.oreilly.com/library/view/clean-architecture-a/9780134494272/',
-        ],
-        [
-            'id' => 3,
-            'judul' => 'Designing Data-Intensive Applications',
-            'penulis' => 'Martin Kleppmann',
-            'tahun_terbit' => 2017,
-            'kategori' => 'Basis Data',
-            'tautan_baca' => 'https://www.oreilly.com/library/view/designing-data-intensive/9781491903063/',
-        ],
-        [
-            'id' => 4,
-            'judul' => 'Laravel: Up & Running',
-            'penulis' => 'Matt Stauffer',
-            'tahun_terbit' => 2019,
-            'kategori' => 'Pengembangan Web',
-            'tautan_baca' => 'https://www.oreilly.com/library/view/laravel-up/9781492041207/',
-        ],
-        [
-            'id' => 5,
-            'judul' => 'Eloquent JavaScript',
-            'penulis' => 'Marijn Haverbeke',
-            'tahun_terbit' => 2024,
-            'kategori' => 'Pemrograman Web',
-            'tautan_baca' => 'https://eloquentjavascript.net/',
-        ],
-    ];
-
     public function index()
     {
+        // Data buku diambil oleh JavaScript dari GET /api/buku.
+        // Controller hanya menyediakan daftar kategori untuk pilihan pada formulir.
         return view('buku.index', [
-            'daftarBuku' => $this->daftarBuku,
+            'daftarKategori' => Kategori::orderBy('nama')->get(['id', 'nama']),
         ]);
     }
 
     public function show($id)
     {
-        $buku = collect($this->daftarBuku)->firstWhere('id', (int) $id);
+        $buku = Buku::with('kategori')->find($id);
+        $buku = $buku ? $this->formatBuku($buku) : null;
 
         return view('buku.detail', compact('buku'));
+    }
+
+    // Bentuk datanya disamakan dengan array lama, jadi View tidak perlu diubah
+    private function formatBuku(Buku $buku): array
+    {
+        return [
+            'id'           => $buku->id,
+            'judul'        => $buku->judul,
+            'penulis'      => $buku->penulis,
+            'tahun_terbit' => $buku->tahun_terbit,
+            'kategori'     => $buku->kategori->nama,
+        ];
     }
 }

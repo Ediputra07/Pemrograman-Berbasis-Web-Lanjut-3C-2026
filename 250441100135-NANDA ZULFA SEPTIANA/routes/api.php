@@ -9,8 +9,8 @@ Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
 
-Route::apiResource('buku', BukuController::class);
-Route::get('/buku-kategori', [BukuController::class, 'getKategori']);
+// Route::apiResource('buku', BukuController::class);
+// Route::get('/buku-kategori', [BukuController::class, 'getKategori']);
 
 // Route::apiResource('buku', [BukuController::class, 'store']);
 

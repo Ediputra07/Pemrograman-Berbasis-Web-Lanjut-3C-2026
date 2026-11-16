@@ -12,15 +12,23 @@ class Peminjaman extends Model
     protected $table = 'peminjamans';
 
     protected $fillable = [
-        'anggota_id',
+        'anggota_id', // Menggunakan anggota_id sesuai tabel
         'buku_id',
         'tanggal_pinjam',
         'tanggal_kembali',
+        'status',
     ];
 
+    // Relasi ke User (menggunakan foreign key 'anggota_id')
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'anggota_id');
+    }
+
+    // Atau buat fungsi alternatif bernama anggota()
     public function anggota()
     {
-        return $this->belongsTo(Anggota::class, 'anggota_id');
+        return $this->belongsTo(User::class, 'anggota_id');
     }
 
     public function buku()

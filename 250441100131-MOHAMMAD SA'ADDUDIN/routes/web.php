@@ -5,7 +5,7 @@ use App\Http\Controllers\BukuController;
 
 Route::get('/', function () {
     return view('beranda');
-})->name('home');
+})->name ('home');
 
 Route::get('/buku', [BukuController::class, 'index'])->name('buku.index');
 

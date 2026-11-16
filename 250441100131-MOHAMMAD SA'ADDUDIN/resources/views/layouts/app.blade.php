@@ -26,6 +26,7 @@
     <footer class="footer">
         <p>&copy; {{ date('Y') }} Ruang Baca</p>
     </footer>
+    @stack('scripts')
 </body>
 
 </html>

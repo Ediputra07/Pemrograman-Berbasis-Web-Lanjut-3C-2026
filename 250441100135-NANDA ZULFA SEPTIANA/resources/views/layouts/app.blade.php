@@ -1,80 +1,36 @@
 <!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{ config('app.name', 'Laravel') }}</title>
 
-    <title>
-        @yield('title', 'Nex-GRead')
-    </title>
+        <!-- Fonts -->
+        <link rel="preconnect" href="https://fonts.bunny.net">
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
-    @vite(['resources/css/app.css'])
-</head>
+        <!-- Scripts -->
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    </head>
+    <body class="font-sans antialiased">
+        <div class="min-h-screen bg-gray-100">
+            @include('layouts.navigation')
 
-<body>
+            <!-- Page Heading -->
+            @isset($header)
+                <header class="bg-white shadow">
+                    <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                        {{ $header }}
+                    </div>
+                </header>
+            @endisset
 
-    <!-- Header -->
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
-                <div>
-                    <h1>Nex-GRead</h1>
-                    <p>Temukan buku favoritmu</p>
-                </div>
-            </div>
+            <!-- Page Content -->
+            <main>
+                @yield('content')
+            </main>
         </div>
-    </header>
-
-
-    <!-- Navbar -->
-    <nav class="navbar">
-        <div class="container">
-            <div class="nav-content">
-
-                <a href="{{ route('home') }}" class="nav-brand">
-                    Perpustakaan
-                </a>
-
-                <div class="nav-menu">
-                    <a
-                        href="{{ route('home') }}"
-                        class="{{ request()->routeIs('home') ? 'active' : '' }}"
-                    >
-                        Beranda
-                    </a>
-
-                    <a
-                        href="{{ route('buku.index') }}"
-                        class="{{ request()->routeIs('buku.*') ? 'active' : '' }}"
-                    >
-                        Daftar Buku
-                    </a>
-                </div>
-
-            </div>
-        </div>
-    </nav>
-
-
-    <!-- Konten -->
-    <main class="main-content">
-        <div class="container">
-
-            @yield('content')
-
-        </div>
-    </main>
-
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>
-                &copy; {{ date('Y') }} Nex-GRead.
-            </p>
-        </div>
-    </footer>
-
-</body>
+    </body>
 </html>

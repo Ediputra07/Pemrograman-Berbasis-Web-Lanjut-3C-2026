@@ -182,3 +182,146 @@ a {
 .tombol:hover {
     background: var(--biru-tua);
 }
+/* ---------- Modul 4: halaman Daftar Buku (klien API) ---------- */
+[hidden] {
+    display: none !important;
+}
+.tombol {
+    cursor: pointer;
+    font-family: inherit;
+}
+.tombol:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+.tombol--kecil {
+    padding: 5px 10px;
+    font-size: 0.82rem;
+}
+.tombol--sekunder {
+    background: var(--teks-lembut);
+}
+.tombol--sekunder:hover:not(:disabled) {
+    background: #44525f;
+}
+.tombol--peringatan {
+    background: #a85f0b;
+}
+.tombol--peringatan:hover {
+    background: #824904;
+}
+.tombol--bahaya {
+    background: #c0392b;
+}
+.tombol--bahaya:hover {
+    background: #962d22;
+}
+.alert {
+    padding: 10px 14px;
+    margin: 0 0 18px;
+    border: 1px solid;
+    border-left-width: 4px;
+}
+.alert--success {
+    background: #eaf7ee;
+    border-color: #2e8b57;
+    color: #1d5c39;
+}
+.alert--warning {
+    background: #fff6e5;
+    border-color: #a85f0b;
+    color: #6e3f05;
+}
+.alert--danger {
+    background: #fdecea;
+    border-color: #c0392b;
+    color: #7d241a;
+}
+.kartu-form {
+    background: var(--biru-muda);
+    border: 1px solid var(--garis);
+    border-left: 4px solid var(--biru);
+    padding: 20px 22px 22px;
+    margin: 0 0 28px;
+}
+.form-buku__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+}
+.bidang label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--biru-tua);
+    margin-bottom: 4px;
+}
+.bidang input,
+.bidang select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--garis);
+    background: var(--putih);
+    color: var(--teks);
+    font: inherit;
+}
+.bidang input:focus,
+.bidang select:focus {
+    outline: 2px solid var(--biru);
+    outline-offset: 1px;
+}
+.galat {
+    display: block;
+    min-height: 1.2em;
+    margin-top: 3px;
+    color: #c0392b;
+    font-size: 0.82rem;
+}
+.form-buku__aksi {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+.tabel-gulir {
+    overflow-x: auto;
+}
+.tabel {
+    width: 100%;
+    border-collapse: collapse;
+}
+.tabel th,
+.tabel td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--garis);
+    text-align: left;
+    vertical-align: middle;
+}
+.tabel thead th {
+    background: var(--biru-muda);
+    color: var(--biru-tua);
+    font-size: 0.85rem;
+}
+.tabel__info {
+    text-align: center;
+    color: var(--teks-lembut);
+}
+.tabel__info--galat {
+    color: #7d241a;
+}
+.aksi {
+    white-space: nowrap;
+}
+.aksi .tombol {
+    margin-top: 0;
+}
+.paginasi {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    color: var(--teks-lembut);
+    font-size: 0.9rem;
+}
+.paginasi .tombol {
+    margin-top: 0;
+}
