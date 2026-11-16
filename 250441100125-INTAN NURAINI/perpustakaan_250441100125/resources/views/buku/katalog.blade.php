@@ -1,3 +1,4 @@
+
 @php
     $user = Auth::user();
     $role = $user->getRoleNames()->first();
@@ -462,8 +463,9 @@
                                     <tr>
                                         <td>{{ $index + 1 }}</td>
 
+                                        {{-- A1: Judul buku ditampilkan dengan escaping --}}
                                         <td class="book-title">
-                                            {{ $item->judul }}
+                                            {{$item->judul}}
                                         </td>
 
                                         <td>

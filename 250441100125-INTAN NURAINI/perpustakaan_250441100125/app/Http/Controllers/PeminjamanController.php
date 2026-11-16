@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Peminjaman;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 
 class PeminjamanController extends Controller
 {
@@ -14,6 +15,18 @@ class PeminjamanController extends Controller
             ->get();
 
         return view('peminjaman.index', compact('peminjamans'));
+    }
+
+    // A4: Perbaikan IDOR menggunakan PeminjamanPolicy
+    public function show(int $id)
+    {
+        $peminjaman = Peminjaman::with(['anggota', 'buku'])
+            ->findOrFail($id);
+        
+        // Memeriksa apakah pengguna berhak melihat peminjaman ini.
+        Gate::authorize('view', $peminjaman);
+
+        return view('peminjaman.show', compact('peminjaman'));
     }
 
     public function updateStatus(Request $request, int $id)
