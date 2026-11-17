@@ -8,9 +8,20 @@ use App\Models\Buku;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class BukuController extends Controller
+class BukuController extends Controller implements HasMiddleware
 {
+    
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:lihat daftar buku', only: ['index', 'show']),
+            new Middleware('can:kelola-buku', only: ['store', 'update', 'destroy']),
+        ];
+    }
+
     
     public function index(Request $request): AnonymousResourceCollection
     {
