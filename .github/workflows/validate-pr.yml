@@ -38,12 +38,12 @@ jobs:
         run: |
           echo "Memeriksa keberadaan file terlarang terhadap main WargaLab..."
           CHANGED_FILES=$(git diff --name-only $MERGE_BASE...HEAD)
-          FORBIDDEN_FILES=$(echo "$CHANGED_FILES" | grep -iE '\.(sqlite|sqlite3|db|zip|rar|tar\.gz|7z)$|\.env(\..+)?$' || true)
+          FORBIDDEN_FILES=$(echo "$CHANGED_FILES" | grep -iE '\.(sqlite|sqlite3|db|zip|rar|tar\.gz|7z)$|\.env(\..+)?$' | grep -v -iE '\.env\.example$' || true)
 
           if [ -n "$FORBIDDEN_FILES" ]; then
             echo "ERROR: Ditemukan file yang dilarang dalam repositori:"
             echo "$FORBIDDEN_FILES"
-            echo "Dilarang menyertakan file database lokal (sqlite/db), arsip kompresi (zip/rar/7z), atau konfigurasi .env."
+            echo "Dilarang menyertakan file database lokal (sqlite/db), arsip kompresi (zip/rar/7z), atau konfigurasi .env (selain .env.example)."
             exit 1
           fi
           echo "Lolos: Tidak ada file terlarang yang ditemukan."
@@ -193,11 +193,12 @@ jobs:
           echo "$CHANGED_PHP_FILES"
 
           SYNTAX_ERRORS=0
-          for file in $CHANGED_PHP_FILES; do
+          while IFS= read -r file; do
+            [ -z "$file" ] && continue
             if [ -f "$file" ]; then
               php -l "$file" || SYNTAX_ERRORS=$((SYNTAX_ERRORS + 1))
             fi
-          done
+          done <<< "$CHANGED_PHP_FILES"
 
           if [ "$SYNTAX_ERRORS" -gt 0 ]; then
             echo "GAGAL: Ditemukan $SYNTAX_ERRORS file PHP dengan error sintaks!"
