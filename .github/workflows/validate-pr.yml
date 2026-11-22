@@ -43,7 +43,10 @@ jobs:
           if [ -n "$FORBIDDEN_FILES" ]; then
             echo "ERROR: Ditemukan file yang dilarang dalam repositori:"
             echo "$FORBIDDEN_FILES"
-            echo "Dilarang menyertakan file database lokal (sqlite/db), arsip kompresi (zip/rar/7z), atau konfigurasi .env (selain .env.example)."
+            echo "Ditemukan file terlarang yang diunggah:" > /tmp/pr_validation_error.txt
+            echo "$FORBIDDEN_FILES" >> /tmp/pr_validation_error.txt
+            echo "" >> /tmp/pr_validation_error.txt
+            echo "Catatan: Dilarang menyertakan file database lokal (sqlite/db), arsip zip/rar, atau .env (selain .env.example)." >> /tmp/pr_validation_error.txt
             exit 1
           fi
           echo "Lolos: Tidak ada file terlarang yang ditemukan."
@@ -62,12 +65,16 @@ jobs:
           if [ -n "$NON_STUDENT_FILES" ]; then
             echo "ERROR: PR Anda mengubah file di luar folder mahasiswa Anda:"
             echo "$NON_STUDENT_FILES"
-            echo "Dilarang mengubah file root (seperti README.md, .gitignore, workflow CI)!"
+            echo "PR Anda mengubah file di luar folder mahasiswa Anda:" > /tmp/pr_validation_error.txt
+            echo "$NON_STUDENT_FILES" >> /tmp/pr_validation_error.txt
+            echo "" >> /tmp/pr_validation_error.txt
+            echo "Catatan: Anda dilarang mengubah file root (seperti README.md, .gitignore, atau file workflow CI)." >> /tmp/pr_validation_error.txt
             exit 1
           fi
 
           if [ -z "$STUDENT_FOLDERS" ]; then
             echo "ERROR: Tidak ditemukan perubahan pada folder mahasiswa (format: 12digitNIM-NAMA)!"
+            echo "Tidak ditemukan perubahan pada folder mahasiswa (format: 12digitNIM-NAMA)." > /tmp/pr_validation_error.txt
             exit 1
           fi
 
@@ -75,7 +82,10 @@ jobs:
           if [ "$FOLDER_COUNT" -gt 1 ]; then
             echo "ERROR: PR Anda mengubah lebih dari 1 folder mahasiswa:"
             echo "$STUDENT_FOLDERS"
-            echo "Anda hanya diperbolehkan mengubah folder milik Anda sendiri!"
+            echo "PR Anda mengubah lebih dari 1 folder mahasiswa:" > /tmp/pr_validation_error.txt
+            echo "$STUDENT_FOLDERS" >> /tmp/pr_validation_error.txt
+            echo "" >> /tmp/pr_validation_error.txt
+            echo "Catatan: Anda hanya diperbolehkan mengubah folder milik Anda sendiri." >> /tmp/pr_validation_error.txt
             exit 1
           fi
 
@@ -110,13 +120,12 @@ jobs:
           done <<< "$COMMITS"
 
           if [ "$VALID_COMMITS" -lt 1 ]; then
-            echo ""
-            echo "=========================================================="
             echo "GAGAL: Tidak ditemukan commit yang sesuai format!"
-            echo "Format yang diterima: NIM_NamaLengkap_MODUL<X>_NamaAsprak"
-            echo "(Boleh menggunakan huruf besar/kecil, pemisah spasi/strip/underscore)"
-            echo "Contoh: 250441100096_FahiraAnnisa_Modul3_KakEdi"
-            echo "=========================================================="
+            echo "Format pesan commit Anda tidak sesuai standar aturan praktikum:" > /tmp/pr_validation_error.txt
+            echo "$COMMITS" >> /tmp/pr_validation_error.txt
+            echo "" >> /tmp/pr_validation_error.txt
+            echo "Format wajib: NIM_NamaLengkap_MODUL<X>_NamaAsprak" >> /tmp/pr_validation_error.txt
+            echo "Contoh: 250441100096_FahiraAnnisa_Modul3_KakEdi" >> /tmp/pr_validation_error.txt
             exit 1
           fi
 
@@ -128,31 +137,34 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const fs = require('fs');
             const pr = context.payload.pull_request;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const botTag = '<!-- pbwl-validation-rules-bot -->';
 
+            // Hapus semua komentar lama dari bot ini agar tidak ada duplikasi
             const comments = await github.rest.issues.listComments({
               owner, repo, issue_number: pr.number
             });
-            const existingComment = comments.data.find(c => c.body && c.body.includes(botTag));
-
-            if ('${{ job.status }}' === 'failure') {
-              const message = `${botTag}\n**Status Validasi Aturan: Gagal**\n\nHalo @${pr.user.login},\n\nValidasi otomatis mendeteksi bahwa Pull Request Anda belum memenuhi aturan praktikum PBWL. Kemungkinan penyebab:\n1. Terdapat modifikasi file di luar folder direktori mahasiswa Anda (\`NIM-NAMA\`).\n2. Format commit belum sesuai standar: \`NIM_NamaLengkap_MODUL<X>_NamaAsprak\`.\n3. Terdapat file terlarang yang terunggah (seperti database SQLite, arsip zip/rar, atau file .env).\n\nSilakan periksa detail tab "Checks", lakukan perbaikan pada repositori fork lokal Anda, lalu push kembali ke branch Anda (PR akan otomatis diperbarui).`;
-
-              if (existingComment) {
-                await github.rest.issues.updateComment({
-                  owner, repo, comment_id: existingComment.id, body: message
-                });
-              } else {
-                await github.rest.issues.createComment({
-                  owner, repo, issue_number: pr.number, body: message
+            for (const c of comments.data) {
+              if (c.body && c.body.includes(botTag)) {
+                await github.rest.issues.deleteComment({
+                  owner, repo, comment_id: c.id
                 });
               }
-            } else if ('${{ job.status }}' === 'success' && existingComment) {
-              await github.rest.issues.deleteComment({
-                owner, repo, comment_id: existingComment.id
+            }
+
+            if ('${{ job.status }}' === 'failure') {
+              let detail = 'Pemeriksaan aturan praktikum tidak terpenuhi.';
+              if (fs.existsSync('/tmp/pr_validation_error.txt')) {
+                detail = fs.readFileSync('/tmp/pr_validation_error.txt', 'utf8').trim();
+              }
+
+              const message = `${botTag}\n**Status Validasi Aturan: GAGAL**\n\nHalo @${pr.user.login},\n\nPull Request Anda ditolak karena alasan spesifik berikut:\n\n\`\`\`\n${detail}\n\`\`\`\n\nSilakan lakukan perbaikan pada repositori fork lokal Anda, lalu push kembali ke branch Anda (PR akan otomatis diperbarui).`;
+
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: pr.number, body: message
               });
             }
 
@@ -193,14 +205,20 @@ jobs:
           echo "$CHANGED_PHP_FILES"
 
           SYNTAX_ERRORS=0
+          SYNTAX_LOG=""
           while IFS= read -r file; do
             [ -z "$file" ] && continue
             if [ -f "$file" ]; then
-              php -l "$file" || SYNTAX_ERRORS=$((SYNTAX_ERRORS + 1))
+              PHP_OUT=$(php -l "$file" 2>&1 || true)
+              if echo "$PHP_OUT" | grep -iq "Errors parsing"; then
+                SYNTAX_ERRORS=$((SYNTAX_ERRORS + 1))
+                SYNTAX_LOG="${SYNTAX_LOG}${PHP_OUT}\n"
+              fi
             fi
           done <<< "$CHANGED_PHP_FILES"
 
           if [ "$SYNTAX_ERRORS" -gt 0 ]; then
+            printf "%b" "$SYNTAX_LOG" > /tmp/pr_syntax_error.txt
             echo "GAGAL: Ditemukan $SYNTAX_ERRORS file PHP dengan error sintaks!"
             exit 1
           fi
@@ -213,30 +231,33 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
+            const fs = require('fs');
             const pr = context.payload.pull_request;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const botTag = '<!-- pbwl-validation-syntax-bot -->';
 
+            // Hapus semua komentar lama dari bot ini agar tidak ada duplikasi
             const comments = await github.rest.issues.listComments({
               owner, repo, issue_number: pr.number
             });
-            const existingComment = comments.data.find(c => c.body && c.body.includes(botTag));
-
-            if ('${{ job.status }}' === 'failure') {
-              const message = `${botTag}\n**Status Validasi Sintaks: Gagal**\n\nHalo @${pr.user.login},\n\nPengujian sintaks PHP gagal pada Pull Request Anda. Ditemukan file PHP yang mengandung kesalahan sintaks (syntax error).\n\nSilakan periksa detail tab "Checks" untuk melihat nama file dan baris yang bermasalah, perbaiki di lingkungan lokal Anda, lalu push kembali pembaruannya.`;
-
-              if (existingComment) {
-                await github.rest.issues.updateComment({
-                  owner, repo, comment_id: existingComment.id, body: message
-                });
-              } else {
-                await github.rest.issues.createComment({
-                  owner, repo, issue_number: pr.number, body: message
+            for (const c of comments.data) {
+              if (c.body && c.body.includes(botTag)) {
+                await github.rest.issues.deleteComment({
+                  owner, repo, comment_id: c.id
                 });
               }
-            } else if ('${{ job.status }}' === 'success' && existingComment) {
-              await github.rest.issues.deleteComment({
-                owner, repo, comment_id: existingComment.id
+            }
+
+            if ('${{ job.status }}' === 'failure') {
+              let detail = 'Ditemukan kesalahan sintaks PHP.';
+              if (fs.existsSync('/tmp/pr_syntax_error.txt')) {
+                detail = fs.readFileSync('/tmp/pr_syntax_error.txt', 'utf8').trim();
+              }
+
+              const message = `${botTag}\n**Status Validasi Sintaks: GAGAL**\n\nHalo @${pr.user.login},\n\nPengujian sintaks PHP gagal pada Pull Request Anda. Ditemukan kesalahan sintaks pada kode:\n\n\`\`\`\n${detail}\n\`\`\`\n\nSilakan perbaiki kesalahan sintaks pada baris di atas secara lokal, lalu push kembali pembaruannya.`;
+
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: pr.number, body: message
               });
             }
