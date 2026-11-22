@@ -1,6 +1,14 @@
 const root = document.getElementById('app-buku');
 const API = root.dataset.apiUrl;            
 const DETAIL_URL = root.dataset.detailUrl; 
+const LOGIN_URL = root.dataset.loginUrl;
+
+
+const BISA_KELOLA = root.dataset.bisaKelola === '1';
+const JUMLAH_KOLOM = BISA_KELOLA ? 6 : 5;
+
+// Token CSRF dari <meta> di layout, wajib untuk POST/PUT/DELETE karena API memakai session
+const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
 const FIELD = ['kategori_id', 'judul', 'penulis', 'tahun_terbit'];
 const $ = (id) => document.getElementById(id);
@@ -24,6 +32,9 @@ class ApiError extends Error {
 }
 
 function pesanDariStatus(status) {
+  if (status === 401) return 'Sesi login Anda berakhir. Silakan login kembali.';
+  if (status === 403) return 'Anda tidak memiliki izin untuk melakukan aksi ini.';
+  if (status === 419) return 'Sesi halaman kedaluwarsa. Muat ulang halaman lalu coba lagi.';
   if (status === 404) return 'Data yang diminta tidak ditemukan.';
   if (status === 422) return 'Data yang dikirim belum valid.';
   if (status >= 500) return `Terjadi kesalahan pada server (HTTP ${status}). Silakan coba lagi nanti.`;
@@ -37,7 +48,10 @@ function pesan(teks, jenis = 'success') {
 const hapusPesan = () => { $('alert-area').innerHTML = ''; };
 
 function bersihkanError() {
-  FIELD.forEach((f) => { $(`err-${f}`).textContent = ''; });
+  FIELD.forEach((f) => {
+    const el = $(`err-${f}`);
+    if (el) el.textContent = '';
+  });
 }
 
 const detailUrl = (id) => DETAIL_URL.replace('__ID__', encodeURIComponent(id));
@@ -45,7 +59,11 @@ const detailUrl = (id) => DETAIL_URL.replace('__ID__', encodeURIComponent(id));
 /* Satu pintu untuk semua request  */
 
 async function apiRequest(path = '', { method = 'GET', body = null } = {}) {
-  const headers = { Accept: 'application/json' };
+  const headers = {
+    Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+    'X-CSRF-TOKEN': CSRF_TOKEN,
+  };
   if (body !== null) headers['Content-Type'] = 'application/json';
 
   let response;
@@ -53,6 +71,7 @@ async function apiRequest(path = '', { method = 'GET', body = null } = {}) {
     response = await fetch(API + path, {
       method,
       headers,
+      credentials: 'same-origin', 
       body: body !== null ? JSON.stringify(body) : undefined,
     });
   } catch (err) {
@@ -84,6 +103,11 @@ function tanganiError(err) {
     return;
   }
 
+  if (err.status === 401) {
+    window.location.href = LOGIN_URL; // belum login / sesi habis
+    return;
+  }
+
   if (err.status === 422) {
  
     Object.entries(err.errors).forEach(([field, daftar]) => {
@@ -103,7 +127,7 @@ function tanganiError(err) {
 
 async function muatBuku(page = 1) {
   const nomor = ++nomorPermintaan;
-  $('tbody-buku').innerHTML = '<tr><td colspan="6" class="tabel__info">Memuat data...</td></tr>';
+  $('tbody-buku').innerHTML = `<tr><td colspan="${JUMLAH_KOLOM}" class="tabel__info">Memuat data...</td></tr>`;
 
   try {
     const json = await apiRequest(`?page=${page}`);
@@ -125,12 +149,12 @@ async function muatBuku(page = 1) {
             <td><a href="${esc(detailUrl(b.id))}">${esc(b.judul)}</a></td>
             <td>${esc(b.penulis)}</td>
             <td>${esc(b.tahun)}</td>
-            <td class="aksi">
+            ${BISA_KELOLA ? `<td class="aksi">
               <button type="button" class="tombol tombol--kecil tombol--peringatan" data-aksi="ubah" data-id="${esc(b.id)}">Ubah</button>
               <button type="button" class="tombol tombol--kecil tombol--bahaya" data-aksi="hapus" data-id="${esc(b.id)}">Hapus</button>
-            </td>
+            </td>` : ''}
           </tr>`).join('')
-      : '<tr><td colspan="6" class="tabel__info">Belum ada data buku.</td></tr>';
+      : `<tr><td colspan="${JUMLAH_KOLOM}" class="tabel__info">Belum ada data buku.</td></tr>`;
 
     $('info-halaman').textContent = data.length
       ? `Halaman ${meta.current_page} dari ${meta.last_page} (${meta.total} buku)`
@@ -144,7 +168,7 @@ async function muatBuku(page = 1) {
     if (!(err instanceof ApiError)) console.error(err);
 
     $('tbody-buku').innerHTML = `
-      <tr><td colspan="6" class="tabel__info tabel__info--galat">
+      <tr><td colspan="${JUMLAH_KOLOM}" class="tabel__info tabel__info--galat">
         ${esc(teks)}
         <button type="button" class="tombol tombol--kecil" data-aksi="muat-ulang">Coba lagi</button>
       </td></tr>`;
@@ -255,8 +279,11 @@ async function hapus(id) {
 /* Inisialisasi */
 
 document.addEventListener('DOMContentLoaded', () => {
-  $('form-buku').onsubmit = simpan;
-  $('btn-batal').onclick = resetForm;
+  // Form hanya ada di halaman milik Admin/Petugas
+  if (BISA_KELOLA) {
+    $('form-buku').onsubmit = simpan;
+    $('btn-batal').onclick = resetForm;
+  }
   $('btn-prev').onclick = () => muatBuku(halaman - 1);
   $('btn-next').onclick = () => muatBuku(halaman + 1);
 

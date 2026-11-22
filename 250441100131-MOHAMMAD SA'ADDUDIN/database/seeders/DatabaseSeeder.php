@@ -12,9 +12,11 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
+            RoleSeeder::class,      // Modul 5: role & permission
             KategoriSeeder::class,
             AnggotaSeeder::class,
             BukuSeeder::class,
+            UserSeeder::class,      // Modul 5: akun admin, petugas, siswa (+ profil anggota)
             PeminjamanSeeder::class,
         ]);
     }

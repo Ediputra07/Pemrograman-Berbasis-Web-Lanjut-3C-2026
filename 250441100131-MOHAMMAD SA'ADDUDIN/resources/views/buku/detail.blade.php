@@ -24,6 +24,20 @@
                     Baca buku ini
                 </a>
             @endisset
+
+            {{-- Modul 5: pengajuan peminjaman (permission 'mengajukan peminjaman buku') --}}
+            @can('mengajukan peminjaman buku')
+                @if ($sudahAktif)
+                    <p class="catatan">Anda sudah memiliki pengajuan atau peminjaman yang berjalan untuk buku ini.
+                        <a href="{{ route('peminjaman.status') }}">Lihat status</a>.</p>
+                @else
+                    <form method="POST" action="{{ route('peminjaman.store') }}" class="form-inline">
+                        @csrf
+                        <input type="hidden" name="buku_id" value="{{ $buku['id'] }}">
+                        <button type="submit" class="tombol">Ajukan peminjaman</button>
+                    </form>
+                @endif
+            @endcan
         </article>
     @else
         <article class="detail-buku detail-buku--kosong">

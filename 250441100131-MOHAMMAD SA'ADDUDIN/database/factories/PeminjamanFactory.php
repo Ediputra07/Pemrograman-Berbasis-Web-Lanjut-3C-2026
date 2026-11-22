@@ -13,6 +13,9 @@ class PeminjamanFactory extends Factory
     {
         $tanggalPinjam = fake()->dateTimeBetween('-1 month', '-1 week');
 
+        // boleh kosong (null) jika buku belum dikembalikan
+        $tanggalKembali = fake()->optional()->dateTimeBetween($tanggalPinjam, 'now');
+
         return [
             'anggota_id' => Anggota::factory(),
 
@@ -20,8 +23,10 @@ class PeminjamanFactory extends Factory
 
             'tanggal_pinjam' => $tanggalPinjam,
 
-            // boleh kosong (null) jika buku belum dikembalikan
-            'tanggal_kembali' => fake()->optional()->dateTimeBetween($tanggalPinjam, 'now'),
+            'tanggal_kembali' => $tanggalKembali,
+
+            // Modul 5: status mengikuti ada/tidaknya tanggal kembali
+            'status' => $tanggalKembali ? 'dikembalikan' : 'dipinjam',
         ];
     }
 }
